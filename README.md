@@ -1,2 +1,2 @@
 # Placement_Portal_Application_V2
-An Application designed to bridge institutes, companies, and students with role-based permission and access controls.
+A web-based Placement Portal mainly built using Flask, Vue.js, and SQLite. To enable system Admins to manage companies and placement drives, Companies to create recruitment drives, and Students to apply for opportunities and track application status.
