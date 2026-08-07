@@ -278,7 +278,7 @@ onMounted(() => {
             <td>{{ drive.job_title }}</td>
             <td>{{ drive.cgpa_required }}</td>
             <td>{{ drive.branches && drive.branches.length ? drive.branches.join(', ') : drive.branch_required }}</td>
-            <td>{{ drive.year_required }}</td>
+            <td>{{ drive.years && drive.years.length ? drive.years.join(', ') : (drive.year_required || 'N/A') }}</td>
             <td>{{ drive.deadline }}</td>
             <td><button class="btn btn-success btn-sm" type="button" @click="apply(drive.id)">Apply</button></td>
           </tr>

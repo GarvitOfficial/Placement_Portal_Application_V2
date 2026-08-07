@@ -1,8 +1,4 @@
-"""Environment-aware configuration for the Placement Portal backend.
 
-Select an environment with the FLASK_ENV environment variable:
-    FLASK_ENV=development (default) or FLASK_ENV=production
-"""
 import os
 
 from dotenv import load_dotenv
@@ -13,7 +9,7 @@ BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 
 
 class Config:
-    """Shared settings for every environment."""
+
 
     SECRET_KEY = os.environ.get("SECRET_KEY", "dev-secret-change-me")
     JWT_SECRET = os.environ.get("JWT_SECRET", "dev-secret-change-me")

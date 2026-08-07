@@ -18,7 +18,7 @@ const driveForm = ref({
   description: '',
   cgpa_required: '',
   branch_required: [],
-  year_required: '',
+  years: [],
   deadline: '',
 })
 const scheduleById = ref({})
@@ -38,6 +38,15 @@ function toggleBranch(dept) {
     driveForm.value.branch_required.push(dept)
   } else {
     driveForm.value.branch_required.splice(index, 1)
+  }
+}
+
+function toggleYear(year) {
+  const index = driveForm.value.years.indexOf(year)
+  if (index === -1) {
+    driveForm.value.years.push(year)
+  } else {
+    driveForm.value.years.splice(index, 1)
   }
 }
 
@@ -75,7 +84,7 @@ async function createDrive() {
       description: '',
       cgpa_required: '',
       branch_required: company.value.departments ? [...company.value.departments] : [],
-      year_required: '',
+      years: [],
       deadline: '',
     }
     await loadData()
@@ -156,8 +165,21 @@ onMounted(() => {
             <input v-model="driveForm.deadline" class="form-control" type="date" required />
           </div>
           <div class="col-md-4 mb-2">
-            <label class="form-label">Year Required</label>
-            <input v-model="driveForm.year_required" class="form-control" type="number" min="1" max="5" required />
+            <label class="form-label">Eligible Years</label>
+            <div class="d-flex flex-wrap gap-2">
+              <div v-for="year in [2, 3, 4]" :key="year" class="form-check">
+                <input
+                  :id="`drive-year-${year}`"
+                  class="form-check-input"
+                  type="checkbox"
+                  :value="year"
+                  :checked="driveForm.years.includes(year)"
+                  @change="toggleYear(year)"
+                />
+                <label class="form-check-label" :for="`drive-year-${year}`">Year {{ year }}</label>
+              </div>
+            </div>
+            <small class="text-muted">Select all eligible years.</small>
           </div>
           <div class="col-md-12 mb-2">
             <label class="form-label">Eligible Departments</label>
@@ -192,6 +214,7 @@ onMounted(() => {
           <tr>
             <th>Title</th>
             <th>Departments</th>
+            <th>Years</th>
             <th>Status</th>
             <th>Deadline</th>
             <th>Applicants Count</th>
@@ -201,6 +224,7 @@ onMounted(() => {
           <tr v-for="drive in drives" :key="drive.id">
             <td>{{ drive.job_title }}</td>
             <td>{{ drive.branches && drive.branches.length ? drive.branches.join(', ') : drive.branch_required }}</td>
+            <td>{{ drive.years && drive.years.length ? drive.years.join(', ') : (drive.year_required || 'N/A') }}</td>
             <td>{{ drive.status }}</td>
             <td>{{ drive.deadline }}</td>
             <td>{{ drive.applicants_count }}</td>

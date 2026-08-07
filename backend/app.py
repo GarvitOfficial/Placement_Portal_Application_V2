@@ -106,6 +106,7 @@ class PlacementDrive(db.Model):
     status = db.Column(db.String(50), index=True)
     branch_required = db.Column(db.String(100))
     year_required = db.Column(db.Integer)
+    years_required = db.Column(db.String(100))  # CSV of eligible years (e.g., "2,3,4")
 
     company = db.relationship("Company")
 
@@ -303,6 +304,13 @@ def company_payload(company):
 
 def drive_payload(drive):
     company = Company.query.get(drive.company_id)
+    # Parse years: use years_required (CSV) if available, else fall back to year_required (single int)
+    if drive.years_required:
+        years = [int(y.strip()) for y in drive.years_required.split(",") if y.strip()]
+    elif drive.year_required:
+        years = [drive.year_required]
+    else:
+        years = []
     return {
         "id": drive.id,
         "company_id": drive.company_id,
@@ -313,6 +321,7 @@ def drive_payload(drive):
         "branch_required": drive.branch_required,
         "branches": branches_list(drive.branch_required),
         "year_required": drive.year_required,
+        "years": years,
         "deadline": drive.deadline,
         "status": drive.status,
     }
@@ -364,6 +373,7 @@ def ensure_columns():
             "placement_drive": {
                 "branch_required": "VARCHAR(100)",
                 "year_required": "INTEGER",
+                "years_required": "VARCHAR(100)",
             },
             "application": {
                 "application_date": "VARCHAR(50)",
@@ -469,11 +479,12 @@ def student_register(data):
 
 
 @app.route("/company/register", methods=["POST"])
-@validate_json(["username", "email", "password", "company_name", "website"])
+@validate_json(["email", "password", "company_name", "website"])
 def company_register(data):
     if user_exists(data["email"]):
         return jsonify({"message": "Email already registered"}), 400
-    user = User(username=data["username"], email=data["email"], password=hash_password(data["password"]), role="company")
+    username = data["email"].split("@")[0]
+    user = User(username=username, email=data["email"], password=hash_password(data["password"]), role="company")
     db.session.add(user)
     db.session.commit()
     company = Company(
@@ -597,7 +608,7 @@ def blacklist_student(student_id):
 
 @app.route("/drive/create", methods=["POST"])
 @company_required
-@validate_json(["company_id", "job_title", "description", "cgpa_required", "branch_required", "year_required", "deadline"])
+@validate_json(["company_id", "job_title", "description", "cgpa_required", "branch_required", "deadline"])
 def create_drive(data):
     company = Company.query.get(data["company_id"])
     if not company:
@@ -609,13 +620,21 @@ def create_drive(data):
     branches = normalize_branches(data["branch_required"])
     if not branches:
         return jsonify({"message": "At least one eligible department is required"}), 400
+    # Parse years: accept list or single value, save as CSV in years_required
+    years_input = data.get("years") or data.get("year_required")
+    if not years_input:
+        return jsonify({"message": "At least one eligible year is required"}), 400
+    if isinstance(years_input, (list, tuple)):
+        years_csv = ",".join([str(int(y)) for y in years_input])
+    else:
+        years_csv = str(int(years_input))
     drive = PlacementDrive(
         company_id=company.id,
         job_title=data["job_title"],
         description=data["description"],
         cgpa_required=float(data["cgpa_required"]),
         branch_required=branches,
-        year_required=int(data["year_required"]),
+        years_required=years_csv,
         deadline=data["deadline"],
         status="Pending",
     )
@@ -636,10 +655,13 @@ def drives():
     deadline_before = request.args.get("deadline_before", "").strip()
 
     query = PlacementDrive.query
+    # Hide drives from blacklisted companies (except when viewing specific company's drives)
+    if not company_id:
+        query = query.join(Company).filter(Company.blacklisted != True)
     if company_id:
         query = query.filter_by(company_id=company_id)
     if approved_only:
-        query = query.filter_by(status="Approved")
+        query = query.filter(PlacementDrive.status == "Approved")
     if q:
         query = query.filter(PlacementDrive.job_title.ilike(f"%{q}%"))
     if branch:
@@ -692,6 +714,9 @@ def apply(data):
     drive = PlacementDrive.query.get(data["drive_id"])
     if not drive:
         return jsonify({"message": "Drive not found"}), 404
+    drive_company = Company.query.get(drive.company_id)
+    if drive_company and drive_company.blacklisted:
+        return jsonify({"success": False, "message": "This company is blacklisted"}), 403
     if drive.status != "Approved":
         return jsonify({"success": False, "message": "Drive is not approved"}), 403
     deadline = parse_deadline(drive.deadline)
@@ -706,7 +731,12 @@ def apply(data):
     eligible_branches = branches_list(drive.branch_required)
     if eligible_branches and student.branch.strip() not in eligible_branches:
         return jsonify({"success": False, "message": "Branch criteria not met"}), 400
-    if student.year != drive.year_required:
+    # Check year eligibility: use years_required (CSV) if available, else fall back to year_required
+    if drive.years_required:
+        eligible_years = [int(y.strip()) for y in drive.years_required.split(",") if y.strip()]
+        if student.year not in eligible_years:
+            return jsonify({"success": False, "message": "Year criteria not met"}), 400
+    elif drive.year_required and student.year != drive.year_required:
         return jsonify({"success": False, "message": "Year criteria not met"}), 400
 
     application = Application(
