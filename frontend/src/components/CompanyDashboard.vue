@@ -12,6 +12,7 @@ const applications = ref([])
 const message = ref('')
 const error = ref('')
 const departmentOptions = ref([])
+const customYear = ref('')
 const driveForm = ref({
   company_id: props.user.company_id,
   job_title: '',
@@ -48,6 +49,25 @@ function toggleYear(year) {
   } else {
     driveForm.value.years.splice(index, 1)
   }
+}
+
+function addCustomYear() {
+  const year = parseInt(customYear.value)
+  if (year && year >= 1 && year <= 10 && !driveForm.value.years.includes(year)) {
+    driveForm.value.years.push(year)
+    driveForm.value.years.sort((a, b) => a - b)
+    customYear.value = ''
+  }
+}
+
+function statusBadge(status) {
+  const map = {
+    Applied: 'text-bg-info',
+    Shortlisted: 'text-bg-warning',
+    Selected: 'text-bg-success',
+    Rejected: 'text-bg-danger',
+  }
+  return map[status] || 'text-bg-secondary'
 }
 
 async function loadData() {
@@ -166,8 +186,8 @@ onMounted(() => {
           </div>
           <div class="col-md-4 mb-2">
             <label class="form-label">Eligible Years</label>
-            <div class="d-flex flex-wrap gap-2">
-              <div v-for="year in [2, 3, 4]" :key="year" class="form-check">
+            <div class="d-flex flex-wrap gap-2 mb-2">
+              <div v-for="year in [1, 2, 3, 4]" :key="year" class="form-check">
                 <input
                   :id="`drive-year-${year}`"
                   class="form-check-input"
@@ -179,7 +199,14 @@ onMounted(() => {
                 <label class="form-check-label" :for="`drive-year-${year}`">Year {{ year }}</label>
               </div>
             </div>
-            <small class="text-muted">Select all eligible years.</small>
+            <div class="input-group input-group-sm">
+              <input v-model="customYear" class="form-control" type="number" min="1" max="10" placeholder="Custom year" />
+              <button class="btn btn-outline-secondary" type="button" @click="addCustomYear">Add Year</button>
+            </div>
+            <div v-if="driveForm.years.length" class="mt-2">
+              <small class="text-muted">Selected: {{ driveForm.years.sort((a, b) => a - b).join(', ') }}</small>
+            </div>
+            <small class="text-muted">Select all eligible years or add custom year.</small>
           </div>
           <div class="col-md-12 mb-2">
             <label class="form-label">Eligible Departments</label>
@@ -239,6 +266,10 @@ onMounted(() => {
         <thead>
           <tr>
             <th>Student</th>
+            <th>CGPA</th>
+            <th>Branch</th>
+            <th>Year</th>
+            <th>Resume</th>
             <th>Drive</th>
             <th>Status</th>
             <th>Interview Schedule</th>
@@ -248,8 +279,15 @@ onMounted(() => {
         <tbody>
           <tr v-for="app in applications" :key="app.application_id">
             <td>{{ app.student_name }}</td>
+            <td>{{ app.student_cgpa }}</td>
+            <td>{{ app.student_branch }}</td>
+            <td>{{ app.student_year }}</td>
+            <td>
+              <a v-if="app.student_resume" :href="`${API}/uploads/${app.student_resume}`" target="_blank" class="btn btn-outline-primary btn-sm">View</a>
+              <span v-else class="text-muted">N/A</span>
+            </td>
             <td>{{ app.job_title }}</td>
-            <td>{{ app.status }}</td>
+            <td><span class="badge" :class="statusBadge(app.status)">{{ app.status }}</span></td>
             <td>
               <input v-model="scheduleById[app.application_id]" class="form-control form-control-sm mb-1" type="datetime-local" />
               <div>{{ app.interview_schedule }}</div>

@@ -247,6 +247,7 @@ onMounted(loadData)
             <th>CGPA</th>
             <th>Branch</th>
             <th>Year</th>
+            <th>Resume</th>
             <th>Blacklisted</th>
             <th>Action</th>
           </tr>
@@ -258,6 +259,10 @@ onMounted(loadData)
             <td>{{ student.cgpa }}</td>
             <td>{{ student.branch }}</td>
             <td>{{ student.year }}</td>
+            <td>
+              <a v-if="student.resume" :href="`${API}/uploads/${student.resume}`" target="_blank" class="btn btn-outline-primary btn-sm">View Resume</a>
+              <span v-else class="text-muted">Not uploaded</span>
+            </td>
             <td>{{ student.blacklisted ? 'Yes' : 'No' }}</td>
             <td>
               <button class="btn btn-outline-danger btn-sm" type="button" @click="action(`/admin/student/blacklist/${student.id}`)">
