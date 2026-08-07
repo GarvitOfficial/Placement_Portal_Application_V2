@@ -2,9 +2,9 @@
 
 This is a Placement Portal Application built for campus recruitment workflows. The core flow is kept simple:
 
-Companies register → Admin approves
-Companies create drives → Admin approves
-Students apply → Company shortlists/selects + schedules interviews
+Companies register -> Admin approves
+Companies create drives -> Admin approves
+Students apply -> Company shortlists/selects + schedules interviews
 
 ## Roles of each user
 
