@@ -64,12 +64,6 @@ Placement_Portal_Application_V2/
 │   │   ├── admin.py            # Admin blueprints (approvals, blacklisting, stats, export)
 │   │   ├── company.py          # Company blueprints (drives, application management)
 │   │   └── student.py          # Student blueprints (profile, apply, history, downloads)
-│   └── tests/                  # Pytest test suite
-│       ├── conftest.py
-│       ├── test_auth.py
-│       ├── test_business_logic.py
-│       ├── test_jobs.py
-│       └── test_models.py
 ├── frontend/
 │   ├── src/
 │   │   ├── App.vue             # Main app component (router)
