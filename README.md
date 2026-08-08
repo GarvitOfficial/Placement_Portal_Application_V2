@@ -45,8 +45,10 @@ Students apply -> Company shortlists/selects + schedules interviews
 ```
 Placement_Portal_Application_V2/
 ├── backend/
-│   ├── app.py                  # Flask app entry + DB creation + default admin + all routes
-│   ├── config.py               # Configuration (DB path, Redis, SMTP)
+│   ├── app.py                  # Flask app entry + DB init + default admin + Blueprint registration
+│   ├── config.py               # Environment-driven configuration (DB path, Redis, Webhook)
+│   ├── cache.py                # Redis cache helpers with safe fallback
+│   ├── utils.py                # Shared decorators (auth, role, JSON) and payload serializers
 │   ├── celery_app.py           # Celery configuration
 │   ├── tasks.py                # Celery tasks (export, email reminders)
 │   ├── requirements.txt        # Python dependencies
@@ -54,6 +56,14 @@ Placement_Portal_Application_V2/
 │   │   └── placement.db        # SQLite database (auto-created)
 │   ├── uploads/                # Student resume uploads
 │   ├── exports/                # CSV export files
+│   ├── models/                 # SQLAlchemy Database models
+│   │   └── __init__.py         # Centralized models (User, StudentProfile, CompanyProfile, etc.)
+│   ├── routes/                 # Flask blueprints for modular endpoint handling
+│   │   ├── __init__.py         # Exposes blueprints
+│   │   ├── auth.py             # Auth blueprints (/login, registrations, /users)
+│   │   ├── admin.py            # Admin blueprints (approvals, blacklisting, stats, export)
+│   │   ├── company.py          # Company blueprints (drives, application management)
+│   │   └── student.py          # Student blueprints (profile, apply, history, downloads)
 │   └── tests/                  # Pytest test suite
 │       ├── conftest.py
 │       ├── test_auth.py

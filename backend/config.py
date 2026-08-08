@@ -19,6 +19,7 @@ class Config:
     SQLALCHEMY_TRACK_MODIFICATIONS = False
 
     CACHE_REDIS_URL = os.environ.get("REDIS_URL", "redis://localhost:6379/0")
+    WEBHOOK_URL = os.environ.get("WEBHOOK_URL", "")
 
     # Celery broker / result backend (see celery_app.py)
     CELERY_BROKER_URL = os.environ.get("REDIS_URL", "redis://localhost:6379/0")

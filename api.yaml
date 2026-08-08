@@ -1,0 +1,1511 @@
+openapi: 3.0.3
+info:
+  title: Placement Portal Application API
+  description: API documentation for the Placement Portal Application (PPA) V2.
+  version: 2.0.0
+servers:
+  - url: http://localhost:8000
+    description: Local development server
+paths:
+  /:
+    get:
+      summary: Index/Home route
+      description: Basic health check endpoint returning the API name.
+      responses:
+        '200':
+          description: Success
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                    example: Placement Portal API
+
+  /departments:
+    get:
+      summary: Get department list
+      description: Returns a canonical list of departments/branches available in the system.
+      responses:
+        '200':
+          description: Success
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  type: string
+                example: ["Computer Science", "Information Technology", "Electronics", "Mechanical", "Civil"]
+
+  /login:
+    post:
+      summary: Authenticate user
+      description: Logs in a student, company, or admin user. Returns user details and a JWT token.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - email
+                - password
+              properties:
+                email:
+                  type: string
+                  format: email
+                  example: hr@google.com
+                password:
+                  type: string
+                  format: password
+                  example: securepassword
+      responses:
+        '200':
+          description: Successfully authenticated
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  id:
+                    type: integer
+                    example: 1
+                  username:
+                    type: string
+                    example: hr
+                  email:
+                    type: string
+                    format: email
+                    example: hr@google.com
+                  role:
+                    type: string
+                    enum: [admin, student, company]
+                    example: company
+                  token:
+                    type: string
+                    description: JWT bearer token for authorized requests
+                    example: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...
+                  student_id:
+                    type: integer
+                    nullable: true
+                    example: null
+                  company_id:
+                    type: integer
+                    nullable: true
+                    example: 5
+                  approved:
+                    type: boolean
+                    example: true
+                  blacklisted:
+                    type: boolean
+                    example: false
+        '401':
+          description: Invalid email or password
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '403':
+          description: Account blacklisted
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  /student/register:
+    post:
+      summary: Register a new student
+      description: Creates a student user account and profile.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - username
+                - email
+                - password
+                - full_name
+                - cgpa
+                - branch
+                - year
+              properties:
+                username:
+                  type: string
+                  example: john_doe
+                email:
+                  type: string
+                  format: email
+                  example: john.doe@university.edu
+                password:
+                  type: string
+                  format: password
+                  example: studentpassword
+                full_name:
+                  type: string
+                  example: John Doe
+                cgpa:
+                  type: number
+                  format: float
+                  example: 8.5
+                branch:
+                  type: string
+                  example: Computer Science
+                year:
+                  type: integer
+                  example: 2026
+      responses:
+        '200':
+          description: Student registered successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                    example: Student Registered Successfully
+                  student_id:
+                    type: integer
+                    example: 12
+        '400':
+          description: Validation error or email already registered
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  /company/register:
+    post:
+      summary: Register a new company
+      description: Creates a company user account and profile.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - email
+                - password
+                - company_name
+                - website
+              properties:
+                email:
+                  type: string
+                  format: email
+                  example: hr@google.com
+                password:
+                  type: string
+                  format: password
+                  example: securepassword
+                company_name:
+                  type: string
+                  example: Google
+                website:
+                  type: string
+                  format: uri
+                  example: https://google.com
+                hr_contact:
+                  type: string
+                  example: +1-555-0199
+                departments:
+                  type: string
+                  description: Comma-separated list of departments/branches to recruit from
+                  example: Computer Science, Information Technology
+      responses:
+        '200':
+          description: Company registered successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                    example: Company Registered Successfully
+                  company_id:
+                    type: integer
+                    example: 5
+        '400':
+          description: Validation error or email already registered
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  /student/profile/{student_id}:
+    get:
+      summary: Get student profile
+      description: Retrieves profile details of a student by ID.
+      parameters:
+        - name: student_id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: Success
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/StudentPayload'
+        '404':
+          description: Student not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+    put:
+      summary: Update student profile
+      description: Updates the profile details of a student.
+      parameters:
+        - name: student_id
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - full_name
+                - cgpa
+                - branch
+                - year
+              properties:
+                full_name:
+                  type: string
+                  example: John Doe
+                cgpa:
+                  type: number
+                  format: float
+                  example: 8.9
+                branch:
+                  type: string
+                  example: Computer Science
+                year:
+                  type: integer
+                  example: 2026
+      responses:
+        '200':
+          description: Profile updated successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                    example: Profile updated
+                  student:
+                    $ref: '#/components/schemas/StudentPayload'
+        '400':
+          description: Missing required fields or validation failure
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '404':
+          description: Student not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  /student/resume/{student_id}:
+    post:
+      summary: Upload student resume
+      description: Uploads a PDF resume file for the student. Requires `student` role authentication.
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: student_id
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              required:
+                - resume
+              properties:
+                resume:
+                  type: string
+                  format: binary
+                  description: The resume file (PDF)
+      responses:
+        '200':
+          description: Resume uploaded successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                    example: Resume uploaded
+                  filename:
+                    type: string
+                    example: 12_82f1bc20a6e0_resume.pdf
+        '400':
+          description: File missing or invalid
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '401':
+          description: Unauthorized
+        '403':
+          description: Forbidden (not a student user)
+        '404':
+          description: Student not found
+
+  /uploads/{filename}:
+    get:
+      summary: Fetch uploaded file
+      description: Downloads/serves a student's resume file.
+      parameters:
+        - name: filename
+          in: path
+          required: true
+          schema:
+            type: string
+            example: 12_82f1bc20a6e0_resume.pdf
+      responses:
+        '200':
+          description: Success (returns file binary)
+          content:
+            application/octet-stream:
+              schema:
+                type: string
+                format: binary
+        '404':
+          description: File not found
+
+  /companies:
+    get:
+      summary: List all companies
+      description: Retrieves a list of all registered companies.
+      responses:
+        '200':
+          description: Success
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/CompanyPayload'
+
+  /students:
+    get:
+      summary: List all students
+      description: Retrieves a list of all registered students.
+      responses:
+        '200':
+          description: Success
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/StudentPayload'
+
+  /admin/company/approve/{company_id}:
+    put:
+      summary: Approve company
+      description: Approves a registered company. Requires `admin` role.
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: company_id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: Success
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                    example: Company approved
+        '401':
+          description: Unauthorized
+        '403':
+          description: Forbidden (not an admin)
+        '404':
+          description: Company not found
+    get:
+      summary: Approve company (via GET)
+      description: Approves a registered company via GET request. Requires `admin` role.
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: company_id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: Success
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                    example: Company approved
+
+  /admin/company/reject/{company_id}:
+    put:
+      summary: Reject company
+      description: Rejects a registered company. Requires `admin` role.
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: company_id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: Success
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                    example: Company rejected
+    get:
+      summary: Reject company (via GET)
+      description: Rejects a registered company via GET request. Requires `admin` role.
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: company_id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: Success
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                    example: Company rejected
+
+  /admin/company/blacklist/{company_id}:
+    put:
+      summary: Blacklist company
+      description: Blacklists a company and revokes approval. Requires `admin` role.
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: company_id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: Success
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                    example: Company blacklisted
+
+  /admin/student/blacklist/{student_id}:
+    put:
+      summary: Blacklist student
+      description: Blacklists a student profile. Requires `admin` role.
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: student_id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: Success
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                    example: Student blacklisted
+
+  /drive/create:
+    post:
+      summary: Create a placement drive
+      description: Submits a new placement drive requirement. Requires `company` role.
+      security:
+        - BearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - company_id
+                - job_title
+                - description
+                - cgpa_required
+                - branch_required
+                - deadline
+              properties:
+                company_id:
+                  type: integer
+                  example: 5
+                job_title:
+                  type: string
+                  example: Software Engineer
+                description:
+                  type: string
+                  example: Job profile details...
+                cgpa_required:
+                  type: number
+                  format: float
+                  example: 7.5
+                branch_required:
+                  type: string
+                  description: String representation of eligible departments
+                  example: Computer Science, Information Technology
+                years:
+                  type: array
+                  items:
+                    type: integer
+                  example: [2026]
+                deadline:
+                  type: string
+                  format: date
+                  description: YYYY-MM-DD format
+                  example: 2026-09-15
+      responses:
+        '200':
+          description: Drive created successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                    example: Drive Created
+                  drive_id:
+                    type: integer
+                    example: 42
+        '400':
+          description: Validation error (e.g. invalid date or departments)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '403':
+          description: Forbidden (company not approved or blacklisted)
+        '404':
+          description: Company not found
+
+  /drives:
+    get:
+      summary: List/Filter placement drives
+      description: Retrieves drives with optional filters.
+      parameters:
+        - name: company_id
+          in: query
+          required: false
+          schema:
+            type: integer
+        - name: approved_only
+          in: query
+          required: false
+          schema:
+            type: string
+            enum: [ "true", "false" ]
+        - name: q
+          in: query
+          required: false
+          schema:
+            type: string
+            description: Search term for job title
+        - name: branch
+          in: query
+          required: false
+          schema:
+            type: string
+            description: Search branch filter
+        - name: max_cgpa
+          in: query
+          required: false
+          schema:
+            type: number
+            format: float
+        - name: deadline_before
+          in: query
+          required: false
+          schema:
+            type: string
+            format: date
+      responses:
+        '200':
+          description: Success
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/DrivePayload'
+
+  /admin/drive/approve/{drive_id}:
+    put:
+      summary: Approve placement drive
+      description: Approves a pending placement drive. Requires `admin` role.
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: drive_id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: Success
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                    example: Drive approved
+    get:
+      summary: Approve placement drive (via GET)
+      description: Approves a pending placement drive. Requires `admin` role.
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: drive_id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: Success
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                    example: Drive approved
+
+  /admin/drive/reject/{drive_id}:
+    put:
+      summary: Reject placement drive
+      description: Rejects a pending placement drive. Requires `admin` role.
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: drive_id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: Success
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                    example: Drive rejected
+    get:
+      summary: Reject placement drive (via GET)
+      description: Rejects a pending placement drive. Requires `admin` role.
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: drive_id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: Success
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                    example: Drive rejected
+
+  /apply:
+    post:
+      summary: Apply to placement drive
+      description: Submits a student's application to a specific drive. Checks eligibility criteria (CGPA, branch, year). Requires `student` role.
+      security:
+        - BearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - student_id
+                - drive_id
+              properties:
+                student_id:
+                  type: integer
+                  example: 12
+                drive_id:
+                  type: integer
+                  example: 42
+      responses:
+        '200':
+          description: Application submitted successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+                  message:
+                    type: string
+                    example: Application Submitted
+        '400':
+          description: Application eligibility/criteria mismatch or already applied
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: false
+                  message:
+                    type: string
+                    example: CGPA criteria not met
+        '403':
+          description: Student or company blacklisted, or drive not approved
+        '404':
+          description: Student or drive not found
+
+  /application/update/{application_id}:
+    put:
+      summary: Update application status
+      description: Changes status of a student's application. Requires `company` role.
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: application_id
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - status
+                - company_id
+              properties:
+                status:
+                  type: string
+                  enum: [Applied, Shortlisted, Rejected, Selected]
+                  example: Shortlisted
+                company_id:
+                  type: integer
+                  example: 5
+      responses:
+        '200':
+          description: Success
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                    example: Status Updated
+        '400':
+          description: Invalid status value or missing payload fields
+        '403':
+          description: Unauthorized (application doesn't belong to the requesting company)
+        '404':
+          description: Application not found
+
+  /application/schedule/{application_id}:
+    put:
+      summary: Schedule interview
+      description: Configures the interview schedule for an application. Requires `company` role.
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: application_id
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - interview_schedule
+                - company_id
+              properties:
+                interview_schedule:
+                  type: string
+                  description: Free text description/timing of the interview
+                  example: "2026-09-20 at 10:00 AM via Google Meet"
+                company_id:
+                  type: integer
+                  example: 5
+      responses:
+        '200':
+          description: Success
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                    example: Interview scheduled
+        '403':
+          description: Unauthorized (application doesn't belong to the requesting company)
+        '404':
+          description: Application not found
+
+  /applications:
+    get:
+      summary: Get all applications
+      description: Retrieves application records. Can be filtered by company or drive.
+      parameters:
+        - name: company_id
+          in: query
+          required: false
+          schema:
+            type: integer
+        - name: drive_id
+          in: query
+          required: false
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: Success
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/ApplicationPayload'
+
+  /student/history/{student_id}:
+    get:
+      summary: Get student application history
+      description: Returns all application records submitted by a specific student.
+      parameters:
+        - name: student_id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: Success
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/ApplicationPayload'
+
+  /admin/dashboard:
+    get:
+      summary: Admin dashboard stats
+      description: Returns counts of total active database records. Requires `admin` role.
+      security:
+        - BearerAuth: []
+      responses:
+        '200':
+          description: Success
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  students:
+                    type: integer
+                    example: 125
+                  companies:
+                    type: integer
+                    example: 32
+                  drives:
+                    type: integer
+                    example: 45
+                  applications:
+                    type: integer
+                    example: 382
+
+  /admin/stats:
+    get:
+      summary: Admin placement statistics
+      description: Computes general statistics like selection rates, status breakdowns, and per-company statistics. Requires `admin` role.
+      security:
+        - BearerAuth: []
+      responses:
+        '200':
+          description: Success
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  drives_total:
+                    type: integer
+                    example: 45
+                  drives_conducted:
+                    type: integer
+                    example: 40
+                  drives_pending:
+                    type: integer
+                    example: 5
+                  students_applied:
+                    type: integer
+                    example: 110
+                  applications_total:
+                    type: integer
+                    example: 382
+                  students_shortlisted:
+                    type: integer
+                    example: 80
+                  students_selected:
+                    type: integer
+                    example: 30
+                  students_rejected:
+                    type: integer
+                    example: 272
+                  selection_rate:
+                    type: number
+                    format: float
+                    example: 7.9
+                  status_breakdown:
+                    type: object
+                    additionalProperties:
+                      type: integer
+                    example: { "Applied": 272, "Shortlisted": 80, "Selected": 30 }
+                  per_company:
+                    type: object
+                    additionalProperties:
+                      type: object
+                      properties:
+                        applications:
+                          type: integer
+                        shortlisted:
+                          type: integer
+                        selected:
+                          type: integer
+                    example:
+                      Google:
+                        applications: 10
+                        shortlisted: 5
+                        selected: 2
+
+  /admin/search/students:
+    get:
+      summary: Admin student search
+      description: Filters and searches through student profiles. Requires `admin` role.
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: q
+          in: query
+          required: false
+          schema:
+            type: string
+            description: Search term matching name, email, or username
+        - name: branch
+          in: query
+          required: false
+          schema:
+            type: string
+        - name: year
+          in: query
+          required: false
+          schema:
+            type: integer
+        - name: min_cgpa
+          in: query
+          required: false
+          schema:
+            type: number
+            format: float
+        - name: max_cgpa
+          in: query
+          required: false
+          schema:
+            type: number
+            format: float
+      responses:
+        '200':
+          description: Success
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/StudentPayload'
+
+  /admin/search/companies:
+    get:
+      summary: Admin company search
+      description: Filters and searches through company profiles. Requires `admin` role.
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: q
+          in: query
+          required: false
+          schema:
+            type: string
+            description: Search term matching name, email, or website
+        - name: department
+          in: query
+          required: false
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Success
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/CompanyPayload'
+
+  /export/applications/{student_id}:
+    post:
+      summary: Export student application history
+      description: Generates a CSV of application history. Tries asynchronous export via Celery if redis is available, otherwise falls back to synchronous export. Requires `student` role.
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: student_id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: Export initialized or completed
+          content:
+            application/json:
+              schema:
+                oneOf:
+                  - type: object
+                    properties:
+                      mode:
+                        type: string
+                        example: async
+                      status:
+                        type: string
+                        example: Pending
+                      task_id:
+                        type: string
+                        example: 3b137d57-3fbb-4d76-8097-bf0d0ff36b9e
+                  - type: object
+                    properties:
+                      mode:
+                        type: string
+                        example: sync
+                      status:
+                        type: string
+                        example: Export Completed
+                      filename:
+                        type: string
+                        example: student_12_applications.csv
+
+  /admin/export:
+    post:
+      summary: Admin export
+      description: Exports application, student, or company datasets to CSV. Optionally sends it via email. Requires `admin` role.
+      security:
+        - BearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - type
+              properties:
+                type:
+                  type: string
+                  enum: [students, companies, applications]
+                  example: students
+                email:
+                  type: string
+                  format: email
+                  description: Optional email address to send the CSV to
+                  example: admin@university.edu
+      responses:
+        '200':
+          description: Success
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                    example: Export Completed
+                  filename:
+                    type: string
+                    example: export_students_1723112345.csv
+                  emailed:
+                    type: boolean
+                    example: true
+                  email_to:
+                    type: string
+                    format: email
+                    nullable: true
+                    example: admin@university.edu
+        '400':
+          description: Invalid export type or payload structure
+
+  /export/status/{task_id}:
+    get:
+      summary: Get async export task status
+      description: Retrieves the current status of an async Celery export task.
+      parameters:
+        - name: task_id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Status retrieved
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                    enum: [Pending, "Export Completed"]
+                    example: "Export Completed"
+                  filename:
+                    type: string
+                    example: student_12_applications.csv
+        '500':
+          description: Export task failed
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                    example: Failed
+                  message:
+                    type: string
+                    example: Celery worker exception details
+
+  /exports/{filename}:
+    get:
+      summary: Download exported file
+      description: Returns the exported CSV file by name.
+      parameters:
+        - name: filename
+          in: path
+          required: true
+          schema:
+            type: string
+            example: export_students_1723112345.csv
+      responses:
+        '200':
+          description: Success
+          content:
+            text/csv:
+              schema:
+                type: string
+        '404':
+          description: File not found
+
+  /register:
+    post:
+      summary: Generic register redirect
+      description: Returns instructions to use role-specific registration endpoints.
+      responses:
+        '400':
+          description: Bad request (always returns error instructions)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  /users:
+    get:
+      summary: List all users
+      description: Retrieves registration credentials summary of all users. Requires login token.
+      security:
+        - BearerAuth: []
+      responses:
+        '200':
+          description: Success
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  type: object
+                  properties:
+                    id:
+                      type: integer
+                    username:
+                      type: string
+                    email:
+                      type: string
+                      format: email
+                    role:
+                      type: string
+
+components:
+  securitySchemes:
+    BearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+
+  schemas:
+    ErrorResponse:
+      type: object
+      properties:
+        message:
+          type: string
+          example: Error message detail
+
+    StudentPayload:
+      type: object
+      properties:
+        id:
+          type: integer
+          example: 12
+        user_id:
+          type: integer
+          example: 10
+        username:
+          type: string
+          example: john_doe
+        email:
+          type: string
+          format: email
+          example: john.doe@university.edu
+        full_name:
+          type: string
+          example: John Doe
+        cgpa:
+          type: number
+          format: float
+          example: 8.5
+        branch:
+          type: string
+          example: Computer Science
+        year:
+          type: integer
+          example: 2026
+        resume:
+          type: string
+          nullable: true
+          example: 12_82f1bc20a6e0_resume.pdf
+        blacklisted:
+          type: boolean
+          example: false
+
+    CompanyPayload:
+      type: object
+      properties:
+        id:
+          type: integer
+          example: 5
+        user_id:
+          type: integer
+          example: 9
+        username:
+          type: string
+          example: hr
+        email:
+          type: string
+          format: email
+          example: hr@google.com
+        company_name:
+          type: string
+          example: Google
+        hr_contact:
+          type: string
+          example: +1-555-0199
+        website:
+          type: string
+          format: uri
+          example: https://google.com
+        departments:
+          type: array
+          items:
+            type: string
+          example: ["Computer Science", "Information Technology"]
+        approved:
+          type: boolean
+          example: true
+        blacklisted:
+          type: boolean
+          example: false
+
+    DrivePayload:
+      type: object
+      properties:
+        id:
+          type: integer
+          example: 42
+        company_id:
+          type: integer
+          example: 5
+        company_name:
+          type: string
+          example: Google
+        job_title:
+          type: string
+          example: Software Engineer
+        description:
+          type: string
+          example: Job profile details...
+        cgpa_required:
+          type: number
+          format: float
+          example: 7.5
+        branch_required:
+          type: string
+          example: Computer Science, Information Technology
+        branches:
+          type: array
+          items:
+            type: string
+          example: ["Computer Science", "Information Technology"]
+        year_required:
+          type: integer
+          nullable: true
+          example: null
+        years:
+          type: array
+          items:
+            type: integer
+          example: [2026]
+        deadline:
+          type: string
+          format: date
+          example: 2026-09-15
+        status:
+          type: string
+          enum: [Pending, Approved, Rejected, Closed]
+          example: Approved
+
+    ApplicationPayload:
+      type: object
+      properties:
+        application_id:
+          type: integer
+          example: 201
+        student_id:
+          type: integer
+          example: 12
+        student_name:
+          type: string
+          example: John Doe
+        student_cgpa:
+          type: number
+          format: float
+          example: 8.5
+        student_branch:
+          type: string
+          example: Computer Science
+        student_year:
+          type: integer
+          example: 2026
+        student_resume:
+          type: string
+          example: 12_82f1bc20a6e0_resume.pdf
+        drive_id:
+          type: integer
+          example: 42
+        job_title:
+          type: string
+          example: Software Engineer
+        company_name:
+          type: string
+          example: Google
+        status:
+          type: string
+          enum: [Applied, Shortlisted, Rejected, Selected]
+          example: Shortlisted
+        application_date:
+          type: string
+          format: date
+          example: 2026-08-08
+        interview_schedule:
+          type: string
+          nullable: true
+          example: "2026-09-20 at 10:00 AM via Google Meet"
