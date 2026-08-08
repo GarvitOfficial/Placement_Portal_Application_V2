@@ -105,7 +105,8 @@ def departments():
 with app.app_context():
     db.create_all()
     ensure_columns()
-    if not User.query.filter_by(role="admin").first():
+    admin_user = User.query.filter_by(role="admin").first()
+    if not admin_user:
         admin_user = User(
             username=app.config["ADMIN_USERNAME"],
             email=app.config["ADMIN_EMAIL"],
@@ -113,6 +114,11 @@ with app.app_context():
             role="admin",
         )
         db.session.add(admin_user)
+        db.session.commit()
+    else:
+        admin_user.username = app.config["ADMIN_USERNAME"]
+        admin_user.email = app.config["ADMIN_EMAIL"]
+        admin_user.password = hash_password(app.config["ADMIN_PASSWORD"])
         db.session.commit()
 
 
